@@ -211,6 +211,7 @@ export async function createFeatureKey(
     : ["enhance_jd", "extract_and_match_jd_cv"];
   const bodyScopes = scopes || envScopes;
   const url = `${LOCAL_API_BASE_URL}/api/v1/users/feature-key?plan=${encodeURIComponent(plan)}`;
+  
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -219,6 +220,7 @@ export async function createFeatureKey(
     },
     body: JSON.stringify({ scopes: bodyScopes }),
   });
+  
   const result = await response.json();
   if (!response.ok) {
     throw new Error(result.message || 'Feature key creation failed');
@@ -242,6 +244,7 @@ export async function getSubscription(apiKey: string): Promise<SubscriptionRespo
   return result;
 }
 
+
 export async function createSubscription(
   apiKey: string,
   plan: string
@@ -264,9 +267,6 @@ export async function createSubscription(
     order_amount: result.amount,
     order_currency: result.currency,
     key_id: result.key_id,
-    skip_payment: result.skip_payment,
-    message: result.message,
-    subscription_id: result.subscription_id,
   };
 }
 
@@ -289,21 +289,21 @@ export async function getPaymentStatus(
   return result;
 }
 
-export async function cancelPayment(
-  apiKey: string,
-  orderId: string
-): Promise<{ success: boolean; message?: string }> {
-  const response = await fetch(`${LOCAL_API_BASE_URL}/api/v1/users/cancel-payment/${orderId}`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-    },
-  });
+// export async function cancelPayment(
+//   apiKey: string,
+//   orderId: string
+// ): Promise<{ success: boolean; message?: string }> {
+//   const response = await fetch(`${LOCAL_API_BASE_URL}/api/v1/users/cancel-payment/${orderId}`, {
+//     method: 'POST',
+//     headers: {
+//       'x-api-key': apiKey,
+//       'Content-Type': 'application/json',
+//     },
+//   });
 
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.detail || 'Failed to cancel payment');
-  }
-  return result;
-}
+//   const result = await response.json();
+//   if (!response.ok) {
+//     throw new Error(result.detail || 'Failed to cancel payment');
+//   }
+//   return result;
+// }
