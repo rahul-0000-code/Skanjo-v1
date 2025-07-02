@@ -225,7 +225,10 @@ export async function createFeatureKey(
   if (!response.ok) {
     throw new Error(result.message || 'Feature key creation failed');
   }
-  return result;
+  return {
+    ...result,
+    feature_key: result.feature_key || result.key,
+  };
 }
 
 export async function getSubscription(apiKey: string): Promise<SubscriptionResponse> {
