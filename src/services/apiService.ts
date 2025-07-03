@@ -79,6 +79,40 @@ export interface CreateFeatureKeyResponse {
   message?: string;
 }
 
+export interface SubscriptionRequest {
+  plan: string; // 'free', 'pro', or 'enterprise'
+}
+
+export interface PaymentOrderResponse {
+  order_id: string;
+  payment_url?: string;
+  order_amount: number;
+  order_currency: string;
+  payment_session_id?: string;
+  message?: string;
+  skip_payment?: boolean;
+  subscription_id?: number;
+  key_id?: string; 
+}
+
+export interface PaymentStatusResponse {
+  order_id: string;
+  status: string; // 'pending', 'success', 'failed', 'cancelled'
+  amount: number;
+  plan: string;
+  payment_id?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface SubscriptionResponse {
+  plan: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  usage_summary: Record<string, any>;
+}
+
 const API_BASE_URL = "https://screening-api.skanjo.com";
 const LOCAL_API_BASE_URL = "http://localhost:8000";
 
@@ -167,12 +201,17 @@ export async function getUserAnalytics(
   return await response.json();
 }
 
-export async function createFeatureKey(apiKey: string, scopes?: string[], plan: string = 'free'): Promise<CreateFeatureKeyResponse> {
+export async function createFeatureKey(
+  apiKey: string, 
+  scopes?: string[], 
+  plan: string = 'free'
+): Promise<CreateFeatureKeyResponse> {
   const envScopes = typeof import.meta !== 'undefined' && import.meta.env.VITE_FEATURE_KEY_SCOPES
     ? JSON.parse(import.meta.env.VITE_FEATURE_KEY_SCOPES)
     : ["enhance_jd", "extract_and_match_jd_cv"];
   const bodyScopes = scopes || envScopes;
   const url = `${LOCAL_API_BASE_URL}/api/v1/users/feature-key?plan=${encodeURIComponent(plan)}`;
+  
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -181,9 +220,93 @@ export async function createFeatureKey(apiKey: string, scopes?: string[], plan: 
     },
     body: JSON.stringify({ scopes: bodyScopes }),
   });
+  
   const result = await response.json();
   if (!response.ok) {
     throw new Error(result.message || 'Feature key creation failed');
   }
+  return {
+    ...result,
+    feature_key: result.feature_key || result.key,
+  };
+}
+
+export async function getSubscription(apiKey: string): Promise<SubscriptionResponse> {
+  const response = await fetch(`${LOCAL_API_BASE_URL}/api/v1/users/subscription`, {
+    method: 'GET',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || 'Failed to get subscription');
+  }
   return result;
 }
+
+
+export async function createSubscription(
+  apiKey: string,
+  plan: string
+): Promise<PaymentOrderResponse> {
+  const response = await fetch(`${LOCAL_API_BASE_URL}/api/v1/users/create-order`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ plan: plan.toLowerCase() }),
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || 'Subscription creation failed');
+  }
+  return {
+    order_id: result.order_id,
+    order_amount: result.amount,
+    order_currency: result.currency,
+    key_id: result.key_id,
+  };
+}
+
+export async function getPaymentStatus(
+  apiKey: string,
+  orderId: string
+): Promise<PaymentStatusResponse> {
+  const response = await fetch(`${LOCAL_API_BASE_URL}/api/v1/users/payment-status/${orderId}`, {
+    method: 'GET',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || 'Failed to get payment status');
+  }
+  return result;
+}
+
+// export async function cancelPayment(
+//   apiKey: string,
+//   orderId: string
+// ): Promise<{ success: boolean; message?: string }> {
+//   const response = await fetch(`${LOCAL_API_BASE_URL}/api/v1/users/cancel-payment/${orderId}`, {
+//     method: 'POST',
+//     headers: {
+//       'x-api-key': apiKey,
+//       'Content-Type': 'application/json',
+//     },
+//   });
+
+//   const result = await response.json();
+//   if (!response.ok) {
+//     throw new Error(result.detail || 'Failed to cancel payment');
+//   }
+//   return result;
+// }
